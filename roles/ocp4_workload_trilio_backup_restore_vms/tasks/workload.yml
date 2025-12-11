@@ -102,13 +102,30 @@
   - templates/tvk-console-plugin-deployment.yaml.j2
   - templates/tvk-console-plugin.yaml.j2
 
-- name: Create Trilio Console Plugin Entry
-  ansible.builtin.shell: |
-    existingPlugins=$(oc get consoles.operator.openshift.io cluster -o json | jq -c '.spec.plugins // []')
-    mergedPlugins=$(jq --argjson existingPlugins "${existingPlugins}" --argjson consolePlugin '["tvk-console-plugin"]' \
-    -c  -n '$existingPlugins + $consolePlugin | unique')
-    patchedPlugins=$(jq --argjson mergedPlugins $mergedPlugins -n -c  '{ "spec": { "plugins": $mergedPlugins } }')
-    oc patch consoles.operator.openshift.io cluster --patch $patchedPlugins  --type=merge
+- name: Get existing console plugins
+  kubernetes.core.k8s_info:
+    api_version: operator.openshift.io/v1
+    kind: Console
+    name: cluster
+  register: r_console_config
+
+- name: Set existing plugins list
+  ansible.builtin.set_fact:
+    _existing_plugins: "{{ r_console_config.resources[0].spec.plugins | default([]) }}"
+
+- name: Add Trilio console plugin to plugins list
+  ansible.builtin.set_fact:
+    _merged_plugins: "{{ (_existing_plugins + ['tvk-console-plugin']) | unique }}"
+
+- name: Patch console operator to enable Trilio plugin
+  kubernetes.core.k8s:
+    api_version: operator.openshift.io/v1
+    kind: Console
+    name: cluster
+    definition:
+      spec:
+        plugins: "{{ _merged_plugins }}"
+    state: patched
 
 - name: Delete ROSA AWS credentials, if config is rosa-consolidated
   when: env_type == 'rosa-consolidated'

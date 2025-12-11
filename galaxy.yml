@@ -1,0 +1,24 @@
+---
+namespace: trilio
+name: workshop
+version: 1.0.0
+readme: README.md
+authors:
+  - Your Name <your.email@example.com>
+
+description: Ansible collection for deploying Trilio workshops on OpenShift
+
+license:
+  - GPL-2.0-or-later
+
+tags:
+  - trilio
+  - openshift
+  - workshop
+
+dependencies: {}
+
+build_ignore:
+  - .git
+  - .gitignore
+  - .DS_Store

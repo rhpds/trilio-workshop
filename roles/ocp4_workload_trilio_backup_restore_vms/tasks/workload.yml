@@ -32,6 +32,17 @@
   - templates/tvk-triliovault-list-secrets-role.yaml.j2
   - templates/tvk-triliovault-demo-platform-user-role.yaml.j2
 
+- name: Wait for DR user namespace to exist
+  when: ocp4_workload_trilio_backup_restore_vms_user_count|int == 1
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ ocp4_workload_trilio_backup_restore_vms_dr_user_namespace }}"
+  register: r_dr_user_namespace
+  until: r_dr_user_namespace.resources | length > 0
+  retries: 60
+  delay: 30
+
 - name: Create Role Bindings for single Trilio user
   when: ocp4_workload_trilio_backup_restore_vms_user_count|int == 1
   kubernetes.core.k8s:
@@ -44,6 +55,20 @@
   - templates/single_user/tvk-triliovault-demo-platform-user-role-binding.yaml.j2
   - templates/single_user/tvk-triliovault-list-secrets-role-binding.yaml.j2
   - templates/single_user/tvk-triliovault-namespaces-role-binding.yaml.j2
+
+- name: Wait for DR user namespaces to exist
+  when: ocp4_workload_trilio_backup_restore_vms_user_count|int > 1
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: >-
+      {{ ocp4_workload_trilio_backup_restore_vms_dr_user_namespace }}-{{
+      ocp4_workload_trilio_backup_restore_vms_dr_user_base }}{{ item }}
+  register: r_dr_user_namespace
+  until: r_dr_user_namespace.resources | length > 0
+  retries: 60
+  delay: 30
+  loop: "{{ range(1, ocp4_workload_trilio_backup_restore_vms_user_count | int + 1) | list }}"
 
 - name: Create Role Bindings for multiple Trilio users
   when: ocp4_workload_trilio_backup_restore_vms_user_count|int > 1
